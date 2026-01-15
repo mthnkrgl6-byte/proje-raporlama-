@@ -40,6 +40,9 @@ const elements = {
   categoryList: document.getElementById("categoryList"),
   newCategoryInput: document.getElementById("newCategoryInput"),
   addCategoryButton: document.getElementById("addCategoryButton"),
+  newUserInput: document.getElementById("newUserInput"),
+  addUserButton: document.getElementById("addUserButton"),
+  userList: document.getElementById("userList"),
   taskList: document.getElementById("taskList"),
   filterCategory: document.getElementById("filterCategory"),
   filterStatus: document.getElementById("filterStatus"),
@@ -103,6 +106,9 @@ const categoryNameById = (id) => {
 
 const taskCompletionState = (task) => {
   const statuses = Object.values(task.assignments);
+  if (!statuses.length) {
+    return "pending";
+  }
   if (statuses.every((status) => status === "done")) {
     return "completed";
   }
@@ -137,6 +143,19 @@ const renderCategoryList = () => {
     .join("");
 };
 
+const renderUserList = () => {
+  elements.userList.innerHTML = state.users
+    .map(
+      (user) => `
+      <li class="category-item">
+        <span>${user.name}</span>
+        <button type="button" data-id="${user.id}" class="edit-user">Düzenle</button>
+      </li>
+    `,
+    )
+    .join("");
+};
+
 const renderTasks = () => {
   const filterCategory = elements.filterCategory.value;
   const filterStatus = elements.filterStatus.value;
@@ -160,7 +179,8 @@ const renderTasks = () => {
       const completionLabel =
         completion === "completed" ? "Tümü tamamlandı" : "Tamamlanmayı bekliyor";
 
-      const assignmentsHtml = state.users
+      const assignedUsers = state.users.filter((user) => task.assignments[user.id]);
+      const assignmentsHtml = assignedUsers
         .map((user) => {
           const status = task.assignments[user.id] ?? "pending";
           const statusLabel =
@@ -196,7 +216,11 @@ const renderTasks = () => {
             <span class="badge">${formatDate(task.dueDate)}</span>
           </div>
           <p class="task-details">${task.details || "Açıklama eklenmedi."}</p>
-          <div class="assignment-list">${assignmentsHtml}</div>
+          ${
+            assignmentsHtml
+              ? `<div class="assignment-list">${assignmentsHtml}</div>`
+              : `<div class="task-details">Bu görev için kullanıcı ataması yok.</div>`
+          }
         </article>
       `;
     })
@@ -207,6 +231,7 @@ const refreshUI = () => {
   buildCategoryOptions();
   buildUserCheckboxes();
   renderCategoryList();
+  renderUserList();
   renderTasks();
   updateSummary();
 };
@@ -241,6 +266,38 @@ const updateCategory = (id, name) => {
     return;
   }
   category.name = trimmed;
+  saveState();
+  refreshUI();
+};
+
+const addUser = (name) => {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return;
+  }
+  const exists = state.users.some((user) => user.name.toLowerCase() === trimmed.toLowerCase());
+  if (exists) {
+    return;
+  }
+  const newUser = {
+    id: `u${crypto.randomUUID().slice(0, 6)}`,
+    name: trimmed,
+  };
+  state.users.push(newUser);
+  saveState();
+  refreshUI();
+};
+
+const updateUser = (id, name) => {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return;
+  }
+  const user = state.users.find((item) => item.id === id);
+  if (!user) {
+    return;
+  }
+  user.name = trimmed;
   saveState();
   refreshUI();
 };
@@ -300,6 +357,11 @@ const setupListeners = () => {
     elements.newCategoryInput.value = "";
   });
 
+  elements.addUserButton.addEventListener("click", () => {
+    addUser(elements.newUserInput.value);
+    elements.newUserInput.value = "";
+  });
+
   elements.categoryList.addEventListener("click", (event) => {
     const button = event.target.closest(".edit-category");
     if (!button) {
@@ -313,6 +375,22 @@ const setupListeners = () => {
     const newName = prompt("Kategori adını güncelleyin:", category.name);
     if (newName) {
       updateCategory(id, newName);
+    }
+  });
+
+  elements.userList.addEventListener("click", (event) => {
+    const button = event.target.closest(".edit-user");
+    if (!button) {
+      return;
+    }
+    const id = button.dataset.id;
+    const user = state.users.find((item) => item.id === id);
+    if (!user) {
+      return;
+    }
+    const newName = prompt("Kullanıcı adını güncelleyin:", user.name);
+    if (newName) {
+      updateUser(id, newName);
     }
   });
 
