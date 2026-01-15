@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Görevlendirme Paneli</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Operasyon Yönetimi</p>
+          <h1>Görevlendirme Paneli</h1>
+          <p class="subtitle">
+            Bölge müdürleri ve ekipler için görev atayın, kategorize edin ve tüm kullanıcıların
+            tamamlanma durumunu anlık takip edin.
+          </p>
+        </div>
+        <div class="hero-card">
+          <h2>Özet</h2>
+          <div class="stats">
+            <div>
+              <p class="stat-label">Toplam Görev</p>
+              <p class="stat-value" id="totalTasks">0</p>
+            </div>
+            <div>
+              <p class="stat-label">Aktif Kategori</p>
+              <p class="stat-value" id="totalCategories">0</p>
+            </div>
+            <div>
+              <p class="stat-label">Atanan Kullanıcı</p>
+              <p class="stat-value" id="totalUsers">0</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Yeni Görev Oluştur</h2>
+            <p>Görev detaylarını girin ve ilgili kullanıcılara atayın.</p>
+          </div>
+          <form id="taskForm" class="task-form">
+            <label>
+              Görev Başlığı
+              <input type="text" name="title" required placeholder="Örn. Aylık stok sayımı" />
+            </label>
+            <label>
+              Kategori
+              <select name="category" id="categorySelect"></select>
+            </label>
+            <label>
+              Tamamlanma Süresi
+              <input type="date" name="dueDate" />
+            </label>
+            <label>
+              Tekrar Aralığı
+              <select name="interval">
+                <option value="Tek Sefer">Tek Sefer</option>
+                <option value="Haftalık">Haftalık</option>
+                <option value="Aylık">Aylık</option>
+                <option value="Çeyreklik">Çeyreklik</option>
+              </select>
+            </label>
+            <fieldset>
+              <legend>Atanacak Kullanıcılar</legend>
+              <div id="userCheckboxes" class="user-grid"></div>
+            </fieldset>
+            <label class="full">
+              Açıklama
+              <textarea name="details" rows="3" placeholder="Görev yönergelerini ekleyin."></textarea>
+            </label>
+            <button type="submit" class="primary">Görev Ata</button>
+          </form>
+
+          <div class="category-panel">
+            <h3>Kategoriler</h3>
+            <div class="category-form">
+              <input type="text" id="newCategoryInput" placeholder="Yeni kategori" />
+              <button type="button" id="addCategoryButton">Ekle</button>
+            </div>
+            <ul id="categoryList" class="category-list"></ul>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Görev Takibi</h2>
+            <div class="filters">
+              <label>
+                Kategori
+                <select id="filterCategory"></select>
+              </label>
+              <label>
+                Durum
+                <select id="filterStatus">
+                  <option value="all">Tümü</option>
+                  <option value="completed">Tümü Tamamlandı</option>
+                  <option value="pending">Bekleyen Var</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div id="taskList" class="task-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
