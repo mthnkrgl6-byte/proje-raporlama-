@@ -1,0 +1,544 @@
+const STORAGE_KEY = "assignment-dashboard";
+
+const defaultState = {
+  users: [
+    { id: "u1", name: "Mustafa Arnabutoğlu ( İstanbul Anadolu )" },
+    { id: "u2", name: "Ziya Çelik ( Bursa )" },
+    { id: "u3", name: "İlhan Küçük ( İstanbul Avrupa )" },
+    { id: "u4", name: "Çağatay Ada ( Tekirdağ )" },
+  ],
+  categories: [],
+  tasks: [],
+};
+
+const elements = {
+  totalTasks: document.getElementById("totalTasks"),
+  totalCategories: document.getElementById("totalCategories"),
+  totalUsers: document.getElementById("totalUsers"),
+  taskForm: document.getElementById("taskForm"),
+  categorySelect: document.getElementById("categorySelect"),
+  userCheckboxes: document.getElementById("userCheckboxes"),
+  categoryList: document.getElementById("categoryList"),
+  newCategoryInput: document.getElementById("newCategoryInput"),
+  addCategoryButton: document.getElementById("addCategoryButton"),
+  newUserInput: document.getElementById("newUserInput"),
+  addUserButton: document.getElementById("addUserButton"),
+  userList: document.getElementById("userList"),
+  taskList: document.getElementById("taskList"),
+  filterCategory: document.getElementById("filterCategory"),
+  filterStatus: document.getElementById("filterStatus"),
+  sideNav: document.getElementById("sideNav"),
+  navToggle: document.querySelector(".nav-toggle"),
+  sections: document.querySelectorAll(".section"),
+};
+
+const loadState = () => {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    return structuredClone(defaultState);
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      users: parsed.users ?? structuredClone(defaultState.users),
+      categories: parsed.categories ?? structuredClone(defaultState.categories),
+      tasks: parsed.tasks ?? structuredClone(defaultState.tasks),
+    };
+  } catch (error) {
+    return structuredClone(defaultState);
+  }
+};
+
+const saveState = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+};
+
+let state = loadState();
+
+const buildCategoryOptions = () => {
+  const options = state.categories
+    .map((category) => `<option value="${category.id}">${category.name}</option>`)
+    .join("");
+
+  elements.categorySelect.innerHTML = options;
+  elements.filterCategory.innerHTML =
+    `<option value="all">Tümü</option>` + options;
+};
+
+const buildUserCheckboxes = () => {
+  elements.userCheckboxes.innerHTML = state.users
+    .map(
+      (user) => `
+      <label class="user-chip">
+        <input type="checkbox" name="assignees" value="${user.id}" checked />
+        ${user.name}
+      </label>
+    `,
+    )
+    .join("");
+};
+
+const updateSummary = () => {
+  elements.totalTasks.textContent = state.tasks.length;
+  elements.totalCategories.textContent = state.categories.length;
+  elements.totalUsers.textContent = state.users.length;
+};
+
+const categoryNameById = (id) => {
+  return state.categories.find((category) => category.id === id)?.name ?? "-";
+};
+
+const taskCompletionState = (task) => {
+  const statuses = Object.values(task.assignments);
+  if (!statuses.length) {
+    return "pending";
+  }
+  if (statuses.every((status) => status === "done")) {
+    return "completed";
+  }
+  return "pending";
+};
+
+const formatDate = (value) => {
+  if (!value) {
+    return "Süre belirtilmedi";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString("tr-TR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const isOverdue = (task) => {
+  if (!task.dueDate) {
+    return false;
+  }
+  const dueDate = new Date(task.dueDate);
+  if (Number.isNaN(dueDate.getTime())) {
+    return false;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  return dueDate < today && taskCompletionState(task) !== "completed";
+};
+
+const renderCategoryList = () => {
+  elements.categoryList.innerHTML = state.categories
+    .map(
+      (category) => `
+      <li class="category-item">
+        <span>${category.name}</span>
+        <div class="category-actions">
+          <button type="button" data-id="${category.id}" class="edit-category">Düzenle</button>
+          <button type="button" data-id="${category.id}" class="delete delete-category">Sil</button>
+        </div>
+      </li>
+    `,
+    )
+    .join("");
+};
+
+const renderUserList = () => {
+  elements.userList.innerHTML = state.users
+    .map(
+      (user) => `
+      <li class="category-item">
+        <span>${user.name}</span>
+        <div class="category-actions">
+          <button type="button" data-id="${user.id}" class="edit-user">Düzenle</button>
+          <button type="button" data-id="${user.id}" class="delete delete-user">Sil</button>
+        </div>
+      </li>
+    `,
+    )
+    .join("");
+};
+
+const renderTasks = () => {
+  const filterCategory = elements.filterCategory.value;
+  const filterStatus = elements.filterStatus.value;
+
+  const filteredTasks = state.tasks.filter((task) => {
+    const categoryMatch = filterCategory === "all" || task.categoryId === filterCategory;
+    const statusMatch =
+      filterStatus === "all" || taskCompletionState(task) === filterStatus;
+    return categoryMatch && statusMatch;
+  });
+
+  if (filteredTasks.length === 0) {
+    elements.taskList.innerHTML =
+      "<div class=\"task-card\">Filtrelere uygun görev bulunamadı.</div>";
+    return;
+  }
+
+  elements.taskList.innerHTML = filteredTasks
+    .map((task) => {
+      const completion = taskCompletionState(task);
+      const overdue = isOverdue(task);
+      const completionLabel =
+        completion === "completed"
+          ? "Tümü tamamlandı"
+          : overdue
+            ? "Süre aşıldı"
+            : "Tamamlanmayı bekliyor";
+
+      const assignedUsers = state.users.filter((user) => task.assignments[user.id]);
+      const assignmentsHtml = assignedUsers
+        .map((user) => {
+          const status = task.assignments[user.id] ?? "pending";
+          const statusLabel =
+            status === "done" ? "Tamamlandı" : status === "failed" ? "Yapılmadı" : "Beklemede";
+          const statusClass =
+            status === "done" ? "done" : status === "failed" ? "" : "pending";
+
+          return `
+            <div class="assignment-card">
+              <div class="assignment-header">
+                <span>${user.name}</span>
+                <span class="status-pill ${statusClass}">${statusLabel}</span>
+              </div>
+              <div class="assignment-actions">
+                <button class="done" data-task="${task.id}" data-user="${user.id}" data-status="done">✓</button>
+                <button class="fail" data-task="${task.id}" data-user="${user.id}" data-status="failed">✕</button>
+                <button class="reset" data-task="${task.id}" data-user="${user.id}" data-status="pending">↺</button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      return `
+        <article class="task-card">
+          <div class="task-meta">
+            <div class="task-header">
+              <h3>${task.title}</h3>
+              <span class="completion-status ${overdue ? "overdue" : ""}">${completionLabel}</span>
+            </div>
+            <div class="task-actions">
+              <button class="edit" data-action="edit" data-task="${task.id}">Düzenle</button>
+              <button class="delete" data-action="delete" data-task="${task.id}">Sil</button>
+            </div>
+          </div>
+          <div class="badges">
+            <span class="badge">${categoryNameById(task.categoryId)}</span>
+            <span class="badge">${task.interval}</span>
+            <span class="badge">${formatDate(task.dueDate)}</span>
+            <span class="badge">Başlangıç: ${formatDate(task.startDate)}</span>
+          </div>
+          <p class="task-details">${task.details || "Açıklama eklenmedi."}</p>
+          ${
+            assignmentsHtml
+              ? `<div class="assignment-list">${assignmentsHtml}</div>`
+              : `<div class="task-details">Bu görev için kullanıcı ataması yok.</div>`
+          }
+        </article>
+      `;
+    })
+    .join("");
+};
+
+const refreshUI = () => {
+  buildCategoryOptions();
+  buildUserCheckboxes();
+  renderCategoryList();
+  renderUserList();
+  renderTasks();
+  updateSummary();
+};
+
+const addCategory = (name) => {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return;
+  }
+  const exists = state.categories.some(
+    (category) => category.name.toLowerCase() === trimmed.toLowerCase(),
+  );
+  if (exists) {
+    return;
+  }
+  const newCategory = {
+    id: `c${crypto.randomUUID().slice(0, 6)}`,
+    name: trimmed,
+  };
+  state.categories.push(newCategory);
+  saveState();
+  refreshUI();
+};
+
+const updateCategory = (id, name) => {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return;
+  }
+  const category = state.categories.find((item) => item.id === id);
+  if (!category) {
+    return;
+  }
+  category.name = trimmed;
+  saveState();
+  refreshUI();
+};
+
+const deleteCategory = (id) => {
+  const category = state.categories.find((item) => item.id === id);
+  if (!category) {
+    return;
+  }
+  if (!confirm(`"${category.name}" kategorisini silmek istiyor musunuz?`)) {
+    return;
+  }
+  state.categories = state.categories.filter((item) => item.id !== id);
+  const fallbackCategoryId = state.categories[0]?.id ?? "";
+  state.tasks.forEach((task) => {
+    if (task.categoryId === id) {
+      task.categoryId = fallbackCategoryId;
+    }
+  });
+  saveState();
+  refreshUI();
+};
+
+const addUser = (name) => {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return;
+  }
+  const exists = state.users.some((user) => user.name.toLowerCase() === trimmed.toLowerCase());
+  if (exists) {
+    return;
+  }
+  const newUser = {
+    id: `u${crypto.randomUUID().slice(0, 6)}`,
+    name: trimmed,
+  };
+  state.users.push(newUser);
+  saveState();
+  refreshUI();
+};
+
+const updateUser = (id, name) => {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return;
+  }
+  const user = state.users.find((item) => item.id === id);
+  if (!user) {
+    return;
+  }
+  user.name = trimmed;
+  saveState();
+  refreshUI();
+};
+
+const deleteUser = (id) => {
+  const user = state.users.find((item) => item.id === id);
+  if (!user) {
+    return;
+  }
+  if (!confirm(`"${user.name}" kullanıcısını silmek istiyor musunuz?`)) {
+    return;
+  }
+  state.users = state.users.filter((item) => item.id !== id);
+  state.tasks.forEach((task) => {
+    delete task.assignments[id];
+  });
+  saveState();
+  refreshUI();
+};
+
+const addTask = (data) => {
+  const selectedUsers = data.assignees ?? [];
+  const assignments = selectedUsers.reduce((acc, userId) => {
+    acc[userId] = "pending";
+    return acc;
+  }, {});
+
+  const newTask = {
+    id: `t${crypto.randomUUID().slice(0, 6)}`,
+    title: data.title,
+    categoryId: data.category,
+    dueDate: data.dueDate,
+    startDate: data.startDate,
+    interval: data.interval,
+    details: data.details,
+    assignments,
+  };
+
+  state.tasks.unshift(newTask);
+  saveState();
+  refreshUI();
+};
+
+const editTask = (taskId) => {
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) {
+    return;
+  }
+  const title = prompt("Görev başlığı:", task.title);
+  if (!title) {
+    return;
+  }
+  const categoryName = categoryNameById(task.categoryId);
+  const categoryInput = prompt("Kategori adı:", categoryName);
+  const categoryMatch = state.categories.find(
+    (category) => category.name.toLowerCase() === (categoryInput ?? "").toLowerCase(),
+  );
+  const dueDate = prompt("Bitiş tarihi (YYYY-AA-GG):", task.dueDate || "");
+  const startDate = prompt("Başlangıç tarihi (YYYY-AA-GG):", task.startDate || "");
+  const interval = prompt("Tekrar aralığı:", task.interval);
+  const details = prompt("Açıklama:", task.details || "");
+
+  task.title = title.trim();
+  if (categoryMatch) {
+    task.categoryId = categoryMatch.id;
+  }
+  task.dueDate = dueDate || "";
+  task.startDate = startDate || "";
+  task.interval = interval || task.interval;
+  task.details = details || "";
+  saveState();
+  refreshUI();
+};
+
+const deleteTask = (taskId) => {
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) {
+    return;
+  }
+  if (!confirm(`"${task.title}" görevini silmek istiyor musunuz?`)) {
+    return;
+  }
+  state.tasks = state.tasks.filter((item) => item.id !== taskId);
+  saveState();
+  refreshUI();
+};
+
+const updateAssignmentStatus = (taskId, userId, status) => {
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) {
+    return;
+  }
+  task.assignments[userId] = status;
+  saveState();
+  renderTasks();
+  updateSummary();
+};
+
+const setActiveSection = (sectionId) => {
+  elements.sections.forEach((section) => {
+    section.classList.toggle("active", section.dataset.section === sectionId);
+  });
+  elements.sideNav.querySelectorAll(".nav-item").forEach((item) => {
+    item.classList.toggle("active", item.dataset.section === sectionId);
+  });
+};
+
+const setupListeners = () => {
+  elements.taskForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(elements.taskForm);
+    const data = Object.fromEntries(formData.entries());
+    data.assignees = formData.getAll("assignees");
+    data.startDate = formData.get("startDate");
+
+    if (!data.assignees.length) {
+      alert("En az bir kullanıcı seçmelisiniz.");
+      return;
+    }
+
+    addTask(data);
+    elements.taskForm.reset();
+    buildUserCheckboxes();
+  });
+
+  elements.addCategoryButton.addEventListener("click", () => {
+    addCategory(elements.newCategoryInput.value);
+    elements.newCategoryInput.value = "";
+  });
+
+  elements.addUserButton.addEventListener("click", () => {
+    addUser(elements.newUserInput.value);
+    elements.newUserInput.value = "";
+  });
+
+  elements.categoryList.addEventListener("click", (event) => {
+    const button = event.target.closest(".edit-category");
+    const deleteButton = event.target.closest(".delete-category");
+    if (button) {
+      const id = button.dataset.id;
+      const category = state.categories.find((item) => item.id === id);
+      if (!category) {
+        return;
+      }
+      const newName = prompt("Kategori adını güncelleyin:", category.name);
+      if (newName) {
+        updateCategory(id, newName);
+      }
+    }
+    if (deleteButton) {
+      deleteCategory(deleteButton.dataset.id);
+    }
+  });
+
+  elements.userList.addEventListener("click", (event) => {
+    const button = event.target.closest(".edit-user");
+    const deleteButton = event.target.closest(".delete-user");
+    if (button) {
+      const id = button.dataset.id;
+      const user = state.users.find((item) => item.id === id);
+      if (!user) {
+        return;
+      }
+      const newName = prompt("Kullanıcı adını güncelleyin:", user.name);
+      if (newName) {
+        updateUser(id, newName);
+      }
+    }
+    if (deleteButton) {
+      deleteUser(deleteButton.dataset.id);
+    }
+  });
+
+  elements.taskList.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-task]");
+    if (!button) {
+      return;
+    }
+    const action = button.dataset.action;
+    if (action === "edit") {
+      editTask(button.dataset.task);
+      return;
+    }
+    if (action === "delete") {
+      deleteTask(button.dataset.task);
+      return;
+    }
+    updateAssignmentStatus(button.dataset.task, button.dataset.user, button.dataset.status);
+  });
+
+  elements.filterCategory.addEventListener("change", renderTasks);
+  elements.filterStatus.addEventListener("change", renderTasks);
+
+  elements.sideNav.addEventListener("click", (event) => {
+    const button = event.target.closest(".nav-item");
+    if (!button) {
+      return;
+    }
+    setActiveSection(button.dataset.section);
+  });
+
+  elements.navToggle.addEventListener("click", () => {
+    const isCollapsed = elements.sideNav.classList.toggle("collapsed");
+    elements.navToggle.setAttribute("aria-expanded", String(!isCollapsed));
+  });
+};
+
+refreshUI();
+setupListeners();
