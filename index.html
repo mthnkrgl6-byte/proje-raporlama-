@@ -37,83 +37,104 @@
       </header>
 
       <main class="content">
-        <section class="panel">
-          <div class="panel-header">
-            <h2>Yeni Görev Oluştur</h2>
-            <p>Görev detaylarını girin ve ilgili kullanıcılara atayın.</p>
-          </div>
-          <form id="taskForm" class="task-form">
-            <label>
-              Görev Başlığı
-              <input type="text" name="title" required placeholder="Örn. Aylık stok sayımı" />
-            </label>
-            <label>
-              Kategori
-              <select name="category" id="categorySelect"></select>
-            </label>
-            <label>
-              Tamamlanma Süresi
-              <input type="date" name="dueDate" />
-            </label>
-            <label>
-              Tekrar Aralığı
-              <select name="interval">
-                <option value="Tek Sefer">Tek Sefer</option>
-                <option value="Haftalık">Haftalık</option>
-                <option value="Aylık">Aylık</option>
-                <option value="Çeyreklik">Çeyreklik</option>
-              </select>
-            </label>
-            <fieldset>
-              <legend>Atanacak Kullanıcılar</legend>
-              <div id="userCheckboxes" class="user-grid"></div>
-            </fieldset>
-            <label class="full">
-              Açıklama
-              <textarea name="details" rows="3" placeholder="Görev yönergelerini ekleyin."></textarea>
-            </label>
-            <button type="submit" class="primary">Görev Ata</button>
-          </form>
+        <aside class="sidebar">
+          <button class="nav-toggle" type="button" aria-expanded="true">
+            Menü
+            <span>▾</span>
+          </button>
+          <nav class="nav" id="sideNav">
+            <button type="button" class="nav-item active" data-section="tasks">Görevler</button>
+            <button type="button" class="nav-item" data-section="categories">Kategoriler</button>
+            <button type="button" class="nav-item" data-section="users">Kullanıcılar</button>
+            <button type="button" class="nav-item" data-section="tracking">Görev Takibi</button>
+          </nav>
+        </aside>
 
-          <div class="category-panel">
-            <h3>Kategoriler</h3>
+        <div class="sections">
+          <section class="panel section active" data-section="tasks">
+            <div class="panel-header">
+              <h2>Yeni Görev Oluştur</h2>
+              <p>Görev detaylarını girin ve ilgili kullanıcılara atayın.</p>
+            </div>
+            <form id="taskForm" class="task-form">
+              <label>
+                Görev Başlığı
+                <input type="text" name="title" required placeholder="Örn. Aylık stok sayımı" />
+              </label>
+              <label>
+                Kategori
+                <select name="category" id="categorySelect"></select>
+              </label>
+              <label>
+                Tamamlanma Süresi
+                <input type="date" name="dueDate" />
+              </label>
+              <label>
+                Tekrar Aralığı
+                <select name="interval">
+                  <option value="Tek Sefer">Tek Sefer</option>
+                  <option value="Haftalık">Haftalık</option>
+                  <option value="Aylık">Aylık</option>
+                  <option value="Çeyreklik">Çeyreklik</option>
+                </select>
+              </label>
+              <fieldset>
+                <legend>Atanacak Kullanıcılar</legend>
+                <div id="userCheckboxes" class="user-grid"></div>
+              </fieldset>
+              <label class="full">
+                Açıklama
+                <textarea name="details" rows="3" placeholder="Görev yönergelerini ekleyin."></textarea>
+              </label>
+              <button type="submit" class="primary">Görev Ata</button>
+            </form>
+          </section>
+
+          <section class="panel section" data-section="categories">
+            <div class="panel-header">
+              <h2>Kategori Yönetimi</h2>
+              <p>Kategori ekleyin, düzenleyin veya kaldırın.</p>
+            </div>
             <div class="category-form">
               <input type="text" id="newCategoryInput" placeholder="Yeni kategori" />
               <button type="button" id="addCategoryButton">Ekle</button>
             </div>
             <ul id="categoryList" class="category-list"></ul>
-          </div>
+          </section>
 
-          <div class="category-panel">
-            <h3>Kullanıcılar</h3>
+          <section class="panel section" data-section="users">
+            <div class="panel-header">
+              <h2>Kullanıcı Yönetimi</h2>
+              <p>Yeni kullanıcıları ekleyin veya mevcutları güncelleyin.</p>
+            </div>
             <div class="category-form">
               <input type="text" id="newUserInput" placeholder="Yeni kullanıcı" />
               <button type="button" id="addUserButton">Ekle</button>
             </div>
             <ul id="userList" class="category-list"></ul>
-          </div>
-        </section>
+          </section>
 
-        <section class="panel">
-          <div class="panel-header">
-            <h2>Görev Takibi</h2>
-            <div class="filters">
-              <label>
-                Kategori
-                <select id="filterCategory"></select>
-              </label>
-              <label>
-                Durum
-                <select id="filterStatus">
-                  <option value="all">Tümü</option>
-                  <option value="completed">Tümü Tamamlandı</option>
-                  <option value="pending">Bekleyen Var</option>
-                </select>
-              </label>
+          <section class="panel section" data-section="tracking">
+            <div class="panel-header">
+              <h2>Görev Takibi</h2>
+              <div class="filters">
+                <label>
+                  Kategori
+                  <select id="filterCategory"></select>
+                </label>
+                <label>
+                  Durum
+                  <select id="filterStatus">
+                    <option value="all">Tümü</option>
+                    <option value="completed">Tümü Tamamlandı</option>
+                    <option value="pending">Bekleyen Var</option>
+                  </select>
+                </label>
+              </div>
             </div>
-          </div>
-          <div id="taskList" class="task-list"></div>
-        </section>
+            <div id="taskList" class="task-list"></div>
+          </section>
+        </div>
       </main>
     </div>
 

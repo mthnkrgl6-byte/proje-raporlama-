@@ -46,6 +46,9 @@ const elements = {
   taskList: document.getElementById("taskList"),
   filterCategory: document.getElementById("filterCategory"),
   filterStatus: document.getElementById("filterStatus"),
+  sideNav: document.getElementById("sideNav"),
+  navToggle: document.querySelector(".nav-toggle"),
+  sections: document.querySelectorAll(".section"),
 };
 
 const loadState = () => {
@@ -136,7 +139,10 @@ const renderCategoryList = () => {
       (category) => `
       <li class="category-item">
         <span>${category.name}</span>
-        <button type="button" data-id="${category.id}" class="edit-category">Düzenle</button>
+        <div class="category-actions">
+          <button type="button" data-id="${category.id}" class="edit-category">Düzenle</button>
+          <button type="button" data-id="${category.id}" class="delete delete-category">Sil</button>
+        </div>
       </li>
     `,
     )
@@ -149,7 +155,10 @@ const renderUserList = () => {
       (user) => `
       <li class="category-item">
         <span>${user.name}</span>
-        <button type="button" data-id="${user.id}" class="edit-user">Düzenle</button>
+        <div class="category-actions">
+          <button type="button" data-id="${user.id}" class="edit-user">Düzenle</button>
+          <button type="button" data-id="${user.id}" class="delete delete-user">Sil</button>
+        </div>
       </li>
     `,
     )
@@ -207,8 +216,14 @@ const renderTasks = () => {
       return `
         <article class="task-card">
           <div class="task-meta">
-            <h3>${task.title}</h3>
-            <span class="completion-status">${completionLabel}</span>
+            <div class="task-header">
+              <h3>${task.title}</h3>
+              <span class="completion-status">${completionLabel}</span>
+            </div>
+            <div class="task-actions">
+              <button class="edit" data-action="edit" data-task="${task.id}">Düzenle</button>
+              <button class="delete" data-action="delete" data-task="${task.id}">Sil</button>
+            </div>
           </div>
           <div class="badges">
             <span class="badge">${categoryNameById(task.categoryId)}</span>
@@ -270,6 +285,25 @@ const updateCategory = (id, name) => {
   refreshUI();
 };
 
+const deleteCategory = (id) => {
+  const category = state.categories.find((item) => item.id === id);
+  if (!category) {
+    return;
+  }
+  if (!confirm(`"${category.name}" kategorisini silmek istiyor musunuz?`)) {
+    return;
+  }
+  state.categories = state.categories.filter((item) => item.id !== id);
+  const fallbackCategoryId = state.categories[0]?.id ?? "";
+  state.tasks.forEach((task) => {
+    if (task.categoryId === id) {
+      task.categoryId = fallbackCategoryId;
+    }
+  });
+  saveState();
+  refreshUI();
+};
+
 const addUser = (name) => {
   const trimmed = name.trim();
   if (!trimmed) {
@@ -302,6 +336,22 @@ const updateUser = (id, name) => {
   refreshUI();
 };
 
+const deleteUser = (id) => {
+  const user = state.users.find((item) => item.id === id);
+  if (!user) {
+    return;
+  }
+  if (!confirm(`"${user.name}" kullanıcısını silmek istiyor musunuz?`)) {
+    return;
+  }
+  state.users = state.users.filter((item) => item.id !== id);
+  state.tasks.forEach((task) => {
+    delete task.assignments[id];
+  });
+  saveState();
+  refreshUI();
+};
+
 const addTask = (data) => {
   const selectedUsers = data.assignees ?? [];
   const assignments = selectedUsers.reduce((acc, userId) => {
@@ -324,6 +374,48 @@ const addTask = (data) => {
   refreshUI();
 };
 
+const editTask = (taskId) => {
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) {
+    return;
+  }
+  const title = prompt("Görev başlığı:", task.title);
+  if (!title) {
+    return;
+  }
+  const categoryName = categoryNameById(task.categoryId);
+  const categoryInput = prompt("Kategori adı:", categoryName);
+  const categoryMatch = state.categories.find(
+    (category) => category.name.toLowerCase() === (categoryInput ?? "").toLowerCase(),
+  );
+  const dueDate = prompt("Bitiş tarihi (YYYY-AA-GG):", task.dueDate || "");
+  const interval = prompt("Tekrar aralığı:", task.interval);
+  const details = prompt("Açıklama:", task.details || "");
+
+  task.title = title.trim();
+  if (categoryMatch) {
+    task.categoryId = categoryMatch.id;
+  }
+  task.dueDate = dueDate || "";
+  task.interval = interval || task.interval;
+  task.details = details || "";
+  saveState();
+  refreshUI();
+};
+
+const deleteTask = (taskId) => {
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) {
+    return;
+  }
+  if (!confirm(`"${task.title}" görevini silmek istiyor musunuz?`)) {
+    return;
+  }
+  state.tasks = state.tasks.filter((item) => item.id !== taskId);
+  saveState();
+  refreshUI();
+};
+
 const updateAssignmentStatus = (taskId, userId, status) => {
   const task = state.tasks.find((item) => item.id === taskId);
   if (!task) {
@@ -333,6 +425,15 @@ const updateAssignmentStatus = (taskId, userId, status) => {
   saveState();
   renderTasks();
   updateSummary();
+};
+
+const setActiveSection = (sectionId) => {
+  elements.sections.forEach((section) => {
+    section.classList.toggle("active", section.dataset.section === sectionId);
+  });
+  elements.sideNav.querySelectorAll(".nav-item").forEach((item) => {
+    item.classList.toggle("active", item.dataset.section === sectionId);
+  });
 };
 
 const setupListeners = () => {
@@ -364,33 +465,39 @@ const setupListeners = () => {
 
   elements.categoryList.addEventListener("click", (event) => {
     const button = event.target.closest(".edit-category");
-    if (!button) {
-      return;
+    const deleteButton = event.target.closest(".delete-category");
+    if (button) {
+      const id = button.dataset.id;
+      const category = state.categories.find((item) => item.id === id);
+      if (!category) {
+        return;
+      }
+      const newName = prompt("Kategori adını güncelleyin:", category.name);
+      if (newName) {
+        updateCategory(id, newName);
+      }
     }
-    const id = button.dataset.id;
-    const category = state.categories.find((item) => item.id === id);
-    if (!category) {
-      return;
-    }
-    const newName = prompt("Kategori adını güncelleyin:", category.name);
-    if (newName) {
-      updateCategory(id, newName);
+    if (deleteButton) {
+      deleteCategory(deleteButton.dataset.id);
     }
   });
 
   elements.userList.addEventListener("click", (event) => {
     const button = event.target.closest(".edit-user");
-    if (!button) {
-      return;
+    const deleteButton = event.target.closest(".delete-user");
+    if (button) {
+      const id = button.dataset.id;
+      const user = state.users.find((item) => item.id === id);
+      if (!user) {
+        return;
+      }
+      const newName = prompt("Kullanıcı adını güncelleyin:", user.name);
+      if (newName) {
+        updateUser(id, newName);
+      }
     }
-    const id = button.dataset.id;
-    const user = state.users.find((item) => item.id === id);
-    if (!user) {
-      return;
-    }
-    const newName = prompt("Kullanıcı adını güncelleyin:", user.name);
-    if (newName) {
-      updateUser(id, newName);
+    if (deleteButton) {
+      deleteUser(deleteButton.dataset.id);
     }
   });
 
@@ -399,11 +506,33 @@ const setupListeners = () => {
     if (!button) {
       return;
     }
+    const action = button.dataset.action;
+    if (action === "edit") {
+      editTask(button.dataset.task);
+      return;
+    }
+    if (action === "delete") {
+      deleteTask(button.dataset.task);
+      return;
+    }
     updateAssignmentStatus(button.dataset.task, button.dataset.user, button.dataset.status);
   });
 
   elements.filterCategory.addEventListener("change", renderTasks);
   elements.filterStatus.addEventListener("change", renderTasks);
+
+  elements.sideNav.addEventListener("click", (event) => {
+    const button = event.target.closest(".nav-item");
+    if (!button) {
+      return;
+    }
+    setActiveSection(button.dataset.section);
+  });
+
+  elements.navToggle.addEventListener("click", () => {
+    const isCollapsed = elements.sideNav.classList.toggle("collapsed");
+    elements.navToggle.setAttribute("aria-expanded", String(!isCollapsed));
+  });
 };
 
 refreshUI();

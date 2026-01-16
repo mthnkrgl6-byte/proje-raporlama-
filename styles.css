@@ -85,8 +85,74 @@ body {
 
 .content {
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
+  grid-template-columns: 240px 1fr;
   gap: 24px;
+}
+
+.sidebar {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  height: fit-content;
+  position: sticky;
+  top: 24px;
+}
+
+.nav-toggle {
+  width: 100%;
+  border: none;
+  background: #eef2ff;
+  color: var(--primary);
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav.collapsed {
+  display: none;
+}
+
+.nav-item {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nav-item.active {
+  border-color: var(--primary);
+  background: #eef2ff;
+  color: var(--primary);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
 }
 
 .panel {
@@ -229,12 +295,21 @@ body {
   font-weight: 600;
 }
 
+.category-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .category-item button {
   border: none;
   background: transparent;
   color: var(--primary);
   font-weight: 600;
   cursor: pointer;
+}
+
+.category-item .delete {
+  color: var(--danger);
 }
 
 .filters {
@@ -273,9 +348,38 @@ body {
   gap: 12px;
 }
 
+.task-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .task-meta h3 {
   margin: 0;
   font-size: 18px;
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.task-actions button {
+  border: none;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.task-actions .edit {
+  background: #eef2ff;
+  color: var(--primary);
+}
+
+.task-actions .delete {
+  background: #fef3f2;
+  color: var(--danger);
 }
 
 .badges {
@@ -382,5 +486,9 @@ body {
 
   .content {
     grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
   }
 }
