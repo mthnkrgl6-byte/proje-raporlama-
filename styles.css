@@ -479,6 +479,11 @@ body {
   font-weight: 600;
 }
 
+.completion-status.overdue {
+  background: #fef3f2;
+  color: var(--danger);
+}
+
 @media (max-width: 980px) {
   .hero {
     flex-direction: column;

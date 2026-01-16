@@ -2,32 +2,13 @@ const STORAGE_KEY = "assignment-dashboard";
 
 const defaultState = {
   users: [
-    { id: "u1", name: "Ege Bölge Müdürü" },
-    { id: "u2", name: "Marmara Bölge Müdürü" },
-    { id: "u3", name: "İç Anadolu Bölge Müdürü" },
-    { id: "u4", name: "Karadeniz Bölge Müdürü" },
+    { id: "u1", name: "Mustafa Arnabutoğlu ( İstanbul Anadolu )" },
+    { id: "u2", name: "Ziya Çelik ( Bursa )" },
+    { id: "u3", name: "İlhan Küçük ( İstanbul Avrupa )" },
+    { id: "u4", name: "Çağatay Ada ( Tekirdağ )" },
   ],
-  categories: [
-    { id: "c1", name: "Personel Yönetimi" },
-    { id: "c2", name: "Depo Yönetimi" },
-    { id: "c3", name: "Finans" },
-  ],
-  tasks: [
-    {
-      id: "t1",
-      title: "Aylık stok sayım raporu",
-      categoryId: "c2",
-      dueDate: "2024-12-15",
-      interval: "Aylık",
-      details: "Depo stokları ve sapma raporları paylaşılacak.",
-      assignments: {
-        u1: "pending",
-        u2: "done",
-        u3: "pending",
-        u4: "failed",
-      },
-    },
-  ],
+  categories: [],
+  tasks: [],
 };
 
 const elements = {
@@ -133,6 +114,20 @@ const formatDate = (value) => {
   });
 };
 
+const isOverdue = (task) => {
+  if (!task.dueDate) {
+    return false;
+  }
+  const dueDate = new Date(task.dueDate);
+  if (Number.isNaN(dueDate.getTime())) {
+    return false;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+  return dueDate < today && taskCompletionState(task) !== "completed";
+};
+
 const renderCategoryList = () => {
   elements.categoryList.innerHTML = state.categories
     .map(
@@ -185,8 +180,13 @@ const renderTasks = () => {
   elements.taskList.innerHTML = filteredTasks
     .map((task) => {
       const completion = taskCompletionState(task);
+      const overdue = isOverdue(task);
       const completionLabel =
-        completion === "completed" ? "Tümü tamamlandı" : "Tamamlanmayı bekliyor";
+        completion === "completed"
+          ? "Tümü tamamlandı"
+          : overdue
+            ? "Süre aşıldı"
+            : "Tamamlanmayı bekliyor";
 
       const assignedUsers = state.users.filter((user) => task.assignments[user.id]);
       const assignmentsHtml = assignedUsers
@@ -218,7 +218,7 @@ const renderTasks = () => {
           <div class="task-meta">
             <div class="task-header">
               <h3>${task.title}</h3>
-              <span class="completion-status">${completionLabel}</span>
+              <span class="completion-status ${overdue ? "overdue" : ""}">${completionLabel}</span>
             </div>
             <div class="task-actions">
               <button class="edit" data-action="edit" data-task="${task.id}">Düzenle</button>
@@ -229,6 +229,7 @@ const renderTasks = () => {
             <span class="badge">${categoryNameById(task.categoryId)}</span>
             <span class="badge">${task.interval}</span>
             <span class="badge">${formatDate(task.dueDate)}</span>
+            <span class="badge">Başlangıç: ${formatDate(task.startDate)}</span>
           </div>
           <p class="task-details">${task.details || "Açıklama eklenmedi."}</p>
           ${
@@ -364,6 +365,7 @@ const addTask = (data) => {
     title: data.title,
     categoryId: data.category,
     dueDate: data.dueDate,
+    startDate: data.startDate,
     interval: data.interval,
     details: data.details,
     assignments,
@@ -389,6 +391,7 @@ const editTask = (taskId) => {
     (category) => category.name.toLowerCase() === (categoryInput ?? "").toLowerCase(),
   );
   const dueDate = prompt("Bitiş tarihi (YYYY-AA-GG):", task.dueDate || "");
+  const startDate = prompt("Başlangıç tarihi (YYYY-AA-GG):", task.startDate || "");
   const interval = prompt("Tekrar aralığı:", task.interval);
   const details = prompt("Açıklama:", task.details || "");
 
@@ -397,6 +400,7 @@ const editTask = (taskId) => {
     task.categoryId = categoryMatch.id;
   }
   task.dueDate = dueDate || "";
+  task.startDate = startDate || "";
   task.interval = interval || task.interval;
   task.details = details || "";
   saveState();
@@ -442,6 +446,7 @@ const setupListeners = () => {
     const formData = new FormData(elements.taskForm);
     const data = Object.fromEntries(formData.entries());
     data.assignees = formData.getAll("assignees");
+    data.startDate = formData.get("startDate");
 
     if (!data.assignees.length) {
       alert("En az bir kullanıcı seçmelisiniz.");
